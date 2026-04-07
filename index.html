@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toddler Activity Wheel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 50%, #a8edea 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      color: #fff;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.25);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      color: rgba(255,255,255,0.9);
+      font-size: 1rem;
+      margin-bottom: 24px;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: 380px;
+      height: 380px;
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.2));
+    }
+
+    /* Arrow pointer at top */
+    .pointer {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 16px solid transparent;
+      border-right: 16px solid transparent;
+      border-top: 36px solid #e74c3c;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      z-index: 10;
+    }
+    .pointer::after {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: -8px;
+      width: 16px;
+      height: 16px;
+      background: #e74c3c;
+      border-radius: 50%;
+    }
+
+    canvas {
+      border-radius: 50%;
+      display: block;
+    }
+
+    /* Center hub */
+    .hub {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px;
+      height: 44px;
+      background: radial-gradient(circle, #fff 30%, #ddd 100%);
+      border-radius: 50%;
+      border: 4px solid #bbb;
+      z-index: 5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .btn-spin {
+      margin-top: 28px;
+      padding: 16px 52px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.45);
+      transition: transform 0.12s, box-shadow 0.12s;
+      letter-spacing: 1px;
+    }
+    .btn-spin:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 28px rgba(245, 87, 108, 0.55);
+    }
+    .btn-spin:active:not(:disabled) { transform: translateY(0); }
+    .btn-spin:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .result-box {
+      margin-top: 24px;
+      padding: 18px 32px;
+      background: #fff;
+      border-radius: 20px;
+      text-align: center;
+      min-width: 280px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s;
+    }
+    .result-box.pop { animation: pop 0.4s ease; }
+    @keyframes pop {
+      0%   { transform: scale(0.85); }
+      60%  { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .result-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+    .result-activity {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #333;
+      margin-top: 4px;
+    }
+
+    /* Editable activity list */
+    details {
+      margin-top: 24px;
+      background: rgba(255,255,255,0.75);
+      border-radius: 16px;
+      padding: 14px 20px;
+      width: 380px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    summary {
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      font-size: 0.95rem;
+      user-select: none;
+    }
+    .activities-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .activity-tag {
+      display: flex;
+      align-items: center;
+      background: #f0f0f0;
+      border-radius: 20px;
+      padding: 4px 10px 4px 12px;
+      font-size: 0.85rem;
+      color: #444;
+    }
+    .activity-tag button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #e74c3c;
+      font-size: 1rem;
+      margin-left: 6px;
+      line-height: 1;
+      padding: 0;
+    }
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .add-row input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1.5px solid #ddd;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .add-row input:focus { border-color: #f5576c; }
+    .add-row button {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .add-row button:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+
+  <h1>🎉 Activity Spinner</h1>
+  <p class="subtitle">What should we do today?</p>
+
+  <div class="wheel-wrapper">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="380" height="380"></canvas>
+    <div class="hub"></div>
+  </div>
+
+  <button class="btn-spin" id="spinBtn" onclick="spin()">SPIN!</button>
+
+  <div class="result-box" id="resultBox">
+    <span class="result-label">Next activity</span>
+    <span class="result-activity" id="resultText">Press SPIN!</span>
+  </div>
+
+  <details>
+    <summary>✏️ Customize activities</summary>
+    <div class="activities-grid" id="tagsGrid"></div>
+    <div class="add-row">
+      <input type="text" id="newActivity" placeholder="Add an activity..." maxlength="30" />
+      <button onclick="addActivity()">Add</button>
+    </div>
+  </details>
+
+<script>
+  const COLORS = [
+    '#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B',
+    '#CC5DE8','#20C997','#F06595','#74C0FC','#A9E34B',
+    '#FFA94D','#63E6BE'
+  ];
+
+  let activities = [
+    'Play with Blocks 🧱',
+    'Dance Party 💃',
+    'Read a Book 📚',
+    'Draw & Color 🖍️',
+    'Sing Songs 🎵',
+    'Playdough Fun 🟡',
+    'Bubbles Outside 🫧',
+    'Puzzle Time 🧩',
+    'Dress-Up 👑',
+    'Build Towers 🏗️',
+    'Stuffed Animals 🧸',
+    'Water Play 💧'
+  ];
+
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2, cy = H / 2, r = W / 2 - 4;
+
+  let currentAngle = 0;
+  let spinning = false;
+
+  function drawWheel(angle) {
+    ctx.clearRect(0, 0, W, H);
+    const n = activities.length;
+    const slice = (2 * Math.PI) / n;
+
+    for (let i = 0; i < n; i++) {
+      const start = angle + i * slice;
+      const end = start + slice;
+      const color = COLORS[i % COLORS.length];
+
+      // Slice
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Text
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + slice / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 3;
+      const fontSize = n > 10 ? 11 : 13;
+      ctx.font = `bold ${fontSize}px Segoe UI, sans-serif`;
+
+      // Shorten long labels
+      let label = activities[i];
+      if (label.length > 18) label = label.slice(0, 17) + '…';
+      ctx.fillText(label, r - 12, 5);
+      ctx.restore();
+    }
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
+
+  function spin() {
+    if (spinning || activities.length < 2) return;
+    spinning = true;
+    document.getElementById('spinBtn').disabled = true;
+
+    const extraSpins = (5 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
+    const randomStop = Math.random() * 2 * Math.PI;
+    const targetAngle = currentAngle + extraSpins + randomStop;
+    const duration = 3500 + Math.random() * 1200;
+    const startAngle = currentAngle;
+    const startTime = performance.now();
+
+    function easeOut(t) {
+      return 1 - Math.pow(1 - t, 4);
+    }
+
+    function frame(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = easeOut(t);
+      currentAngle = startAngle + (targetAngle - startAngle) * eased;
+      drawWheel(currentAngle);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        currentAngle = targetAngle % (2 * Math.PI);
+        drawWheel(currentAngle);
+        spinning = false;
+        document.getElementById('spinBtn').disabled = false;
+        showResult();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function showResult() {
+    const n = activities.length;
+    const slice = (2 * Math.PI) / n;
+    // Pointer is at top (angle = -PI/2 from 0, i.e. 3*PI/2)
+    // Normalize: find which slice the pointer falls in
+    const norm = ((2 * Math.PI - (currentAngle % (2 * Math.PI))) + (3 * Math.PI / 2)) % (2 * Math.PI);
+    const index = Math.floor(norm / slice) % n;
+
+    const box = document.getElementById('resultBox');
+    document.getElementById('resultText').textContent = activities[index];
+    box.classList.remove('pop');
+    void box.offsetWidth; // reflow
+    box.classList.add('pop');
+  }
+
+  // --- Activity management ---
+  function renderTags() {
+    const grid = document.getElementById('tagsGrid');
+    grid.innerHTML = '';
+    activities.forEach((a, i) => {
+      const tag = document.createElement('div');
+      tag.className = 'activity-tag';
+      tag.innerHTML = `${a} <button title="Remove" onclick="removeActivity(${i})">×</button>`;
+      grid.appendChild(tag);
+    });
+  }
+
+  function removeActivity(i) {
+    if (activities.length <= 2) { alert('Need at least 2 activities!'); return; }
+    activities.splice(i, 1);
+    renderTags();
+    drawWheel(currentAngle);
+  }
+
+  function addActivity() {
+    const input = document.getElementById('newActivity');
+    const val = input.value.trim();
+    if (!val) return;
+    if (activities.length >= 16) { alert('Maximum 16 activities!'); return; }
+    activities.push(val);
+    input.value = '';
+    renderTags();
+    drawWheel(currentAngle);
+  }
+
+  document.getElementById('newActivity').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addActivity();
+  });
+
+  // Init
+  renderTags();
+  drawWheel(currentAngle);
+</script>
+</body>
+</html>
